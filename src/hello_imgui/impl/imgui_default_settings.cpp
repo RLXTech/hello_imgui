@@ -13,7 +13,7 @@ namespace ImGuiDefaultSettings
     {
         auto runnerParams = HelloImGui::GetRunnerParams();
         auto defaultIconFont = runnerParams->callbacks.defaultIconFont;
-        float fontSize = 15.f;
+        float fontSize = 18.f;
 
         std::string fontFilename = "fonts/SourceHanSansCN-Medium.otf";
 
