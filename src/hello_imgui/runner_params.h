@@ -1,12 +1,12 @@
 #pragma once
 #include "hello_imgui/app_window_params.h"
-#include "hello_imgui/imgui_window_params.h"
-#include "hello_imgui/runner_callbacks.h"
-#include "hello_imgui/docking_params.h"
 #include "hello_imgui/backend_pointers.h"
+#include "hello_imgui/docking_params.h"
+#include "hello_imgui/dpi_aware.h"
+#include "hello_imgui/imgui_window_params.h"
 #include "hello_imgui/remote_params.h"
 #include "hello_imgui/renderer_backend_options.h"
-#include "hello_imgui/dpi_aware.h"
+#include "hello_imgui/runner_callbacks.h"
 #include <vector>
 
 namespace HelloImGui
@@ -143,23 +143,22 @@ struct FpsIdling
     // `enableIdling`: _bool, default=true_.
     //  Disable idling by setting this to false.
     //  (this can be changed dynamically during execution)
-    bool  enableIdling = true;
+    bool enableIdling = true;
 
     // `isIdling`: bool (dynamically updated during execution)
     //  This bool will be updated during the application execution,
     //  and will be set to true when it is idling.
-    bool  isIdling = false;
+    bool isIdling = false;
 
     // `rememberEnableIdling`: _bool, default=true_.
     //  If true, the last value of enableIdling is restored from the settings at startup.
-    bool  rememberEnableIdling = false;
+    bool rememberEnableIdling = false;
 
     // `fpsIdlingMode`: _FpsIdlingMode, default=FpsIdlingMode::Automatic_.
     // Sets the mode of idling when rendering the GUI (Sleep, EarlyReturn, Automatic)
     FpsIdlingMode fpsIdlingMode = FpsIdlingMode::Auto;
 };
 // @@md
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -183,7 +182,6 @@ struct RunnerParams
     // imgui window params (use docking, showMenuBar, ProvideFullScreenWindow, etc.)
     ImGuiWindowParams imGuiWindowParams;
 
-
     // --------------- Docking -------------------
 
     // `dockingParams`: _see docking_params.h_
@@ -199,7 +197,6 @@ struct RunnerParams
     // Shall the application remember the last selected layout. Only used in advanced
     // cases when several layouts are available.
     bool rememberSelectedAlternativeLayout = true;
-
 
     // --------------- Backends -------------------
 
@@ -219,11 +216,10 @@ struct RunnerParams
     PlatformBackendType platformBackendType = PlatformBackendType::FirstAvailable;
 
     // `renderingBackendType`: _enum RenderingBackendType, default=RenderingBackendType::FirstAvailable_
-    // Select the wanted rendering backend type between `OpenGL3`, `Metal`, `Vulkan`, `DirectX11`, `DirectX12`.
-    // if `FirstAvailable`, it will be selected in the order of preference mentioned above.
-    // Only useful when multiple rendering backend are compiled and available.
+    // Select the wanted rendering backend type between `OpenGL3`, `Metal`, `Vulkan`, `DirectX11`,
+    // `DirectX12`. if `FirstAvailable`, it will be selected in the order of preference mentioned above. Only
+    // useful when multiple rendering backend are compiled and available.
     RendererBackendType rendererBackendType = RendererBackendType::FirstAvailable;
-
 
     // --------------- Settings -------------------
 
@@ -248,7 +244,6 @@ struct RunnerParams
     // `iniFilename_useAppWindowTitle`: _bool, default = true_.
     // Shall the iniFilename be derived from appWindowParams.windowTitle (if not empty)
     bool iniFilename_useAppWindowTitle = true;
-
 
     // --------------- Exit -------------------
 
@@ -288,12 +283,11 @@ struct RunnerParams
     // (only used on emscripten: 0 stands for "let the app or the browser decide")
     int emscripten_fps = 0;
 
-    #ifdef HELLOIMGUI_WITH_REMOTE_DISPLAY
-    RemoteParams remoteParams; // Parameters for Remote display (experimental, unsupported)
-    #endif
+#ifdef HELLOIMGUI_WITH_REMOTE_DISPLAY
+    RemoteParams remoteParams;  // Parameters for Remote display (experimental, unsupported)
+#endif
 };
 // @@md
-
 
 // @@md#IniIniSettingsLocation
 
@@ -313,7 +307,7 @@ void DeleteIniSettings(const RunnerParams& runnerParams);
 // @@md#SimpleRunnerParams
 
 // SimpleRunnerParams is a struct that contains simpler params adapted for simple use cases.
-//For example, this is sufficient to run an application:
+// For example, this is sufficient to run an application:
 //    ```cpp
 //    void MyGui() {
 //        ImGui::Text("Hello, world");
@@ -359,7 +353,7 @@ struct SimpleRunnerParams
     //  Disable idling at startup by setting this to false
     //  When running, use:
     //      HelloImGui::GetRunnerParams()->fpsIdling.enableIdling = false;
-    bool  enableIdling = true;
+    bool enableIdling = true;
 
     RunnerParams ToRunnerParams() const;
 };
