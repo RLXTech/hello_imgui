@@ -23,13 +23,7 @@ namespace ImGuiDefaultSettings
             return;
         }
 
-        bool useDpiResponsiveFonts = runnerParams->dpiAwareParams.onlyUseFontDpiResponsive;
-        HelloImGui::FontLoadingParams fontDefaultParams;
-        fontDefaultParams.useFullGlyphRange = true;
-        if (useDpiResponsiveFonts)
-            LoadFontDpiResponsive(fontFilename, fontSize, fontDefaultParams);
-        else
-            LoadFont(fontFilename, fontSize, fontDefaultParams);
+        LoadFont(fontFilename, fontSize);
 
         if (defaultIconFont == HelloImGui::DefaultIconFont::NoIcons)
             return;
@@ -47,12 +41,8 @@ namespace ImGuiDefaultSettings
 
         HelloImGui::FontLoadingParams fontParams;
         fontParams.mergeToLastFont = true;
-        fontParams.useFullGlyphRange = true;
 
-        if (useDpiResponsiveFonts)
-            LoadFontDpiResponsive(iconFontFile, fontSize, fontParams);
-        else
-            LoadFont(iconFontFile, fontSize, fontParams);
+        LoadFont(iconFontFile, fontSize, fontParams);
     }
 
     void SetupDefaultImGuiConfig()
