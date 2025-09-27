@@ -1,4 +1,35 @@
-Version numbers are synced between hello_imgui and imgui_bundle.
+*Version numbers are synced between "Dear ImGui", "Hello ImGui" and "Dear ImGui Bundle"*
+
+# Unreleased
+
+# v1.92.3
+* toolbars: fix issue in toolbar min size (thanks @wkjarosz)
+### Assets
+* Separate ImageFromAsset and ImageFromAssetWithBg: use ImageFromAssetWithBg to display images with a background or border.
+* Add `SetLoadAssetFileDataFunction(LoadAssetFileDataFunc func)` (Redirect asset loads to user-defined function). Thanks to Jorg Neves Bliesener
+* LoadFontTTF_WithFontAwesomeIcons: can load FontAwesome 6
+### cmake
+* Add cmake option IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+* cmake: can use plutosvg without downloading (using HELLOIMGUI_DOWNLOAD_FREETYPE_IF_NEEDED=OFF)
+
+# v1.92.0
+Version numbers are now synced between "Dear ImGui" "Hello ImGui" and "Dear ImGui Bundle".
+
+* ImGui: Many Font related changes: this release brings many changes on the ImGui side (v1.92.0): do read the [release notes for ImGui v1.92.0](https://github.com/ocornut/imgui/releases/tag/v1.92.0)
+TLDR: Fonts may be rendered at any size. Glyphs are loaded and rasterized dynamically. No need to specify ranges, prebake etc. 
+
+* Removed FontDpiResponsive: this is now handled by ImGui itself
+* Removed FontLoadingParams.glyphRanges, since ranges are not needed anymore by ImGui
+
+# v1.6.3
+- Assets: can search with absolute path or from current working directory
+- Add utility function void UseWindowFullMonitorWorkArea()
+- AppWindowParams: add EmscriptenKeyboardElement
+- Runner: call TearDown on Setup for Python (to make it possible to recover from exceptions in notebook)
+- MakeWindowSizeRelativeTo96Ppi_IfRequired: call EnsureWindowFitsThisMonitor
+- update example_integration (Add CMake example / GNU Install)
+- Add cmake option HELLOIMGUI_USE_EXTERNAL_JSON (to provide nlohmann json yourself)
+- compatibility with CMake 4
 
 # v1.6.0
 * SVG Font rendering: plutosvg replaces lunasvg (option HELLOIMGUI_USE_FREETYPE_PLUTOSVG on by default)

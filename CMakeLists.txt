@@ -4,7 +4,7 @@ else()
     cmake_minimum_required(VERSION 3.10)
 endif()
 
-project(hello-imgui LANGUAGES C CXX VERSION "1.6.0")
+project(hello-imgui LANGUAGES C CXX VERSION "1.92.3")  # 1.92.3 - This mirrors IMGUI_VERSION_NUM in imgui.h
 set(CMAKE_CXX_STANDARD 17)
 
 if (IOS)
@@ -100,6 +100,8 @@ option(HELLOIMGUI_HAS_DIRECTX12 "Use DirectX12 as a rendering backend" OFF)
 option(HELLOIMGUI_HEADLESS "Allow headless mode (will use Null rendering/platform backend)" OFF)
 # </Backends>  # do not remove this line (used by the script that generates the documentation)
 
+option(IMGUI_DISABLE_OBSOLETE_FUNCTIONS "Disable ImGui obsolete functions" OFF)
+
 #------------------------------------------------------------------------------
 # Options / Freetype
 #------------------------------------------------------------------------------
@@ -154,6 +156,12 @@ else()
 endif()
 option(HELLOIMGUI_DOWNLOAD_GLFW_IF_NEEDED "Download and build GLFW if needed" ${autodownload_default})
 option(HELLOIMGUI_DOWNLOAD_SDL_IF_NEEDED "Download and build SDL2 if needed" ${autodownload_default})
+
+# HELLOIMGUI_DOWNLOAD_FREETYPE_IF_NEEDED:
+# - if ON: freetype will be downloaded and built if needed.
+#   plutosvg will also be downloaded and built if needed (if HELLOIMGUI_USE_FREETYPE_PLUTOSVG is ON)
+# - if OFF: freetype shall be provided by the system, or by the user (via CMAKE_PREFIX_PATH or add_subdirectory).
+#   Same for plutosvg (if HELLOIMGUI_USE_FREETYPE_PLUTOSVG is ON)
 option(HELLOIMGUI_DOWNLOAD_FREETYPE_IF_NEEDED "Download and build Freetype if needed" ${autodownload_default})
 option(HELLOIMGUI_FREETYPE_STATIC "Force static linking of freetype (only used for python bindings)" OFF)
 

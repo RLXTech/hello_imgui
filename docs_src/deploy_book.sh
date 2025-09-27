@@ -65,12 +65,12 @@ echo "=================================================="
 # Run REPO_DIR/tools/doc/process_md_docs.py
 # using python from the virtual environment venv
 # Check python presence in the venv/ directory
-if [[ ! -f "$REPO_DIR/venv/bin/python" ]]; then
-    echo "- deploy_book: ERROR: ******** Please create the virtual environment first ********"
-    exit 1
-fi
-# Activate the virtual environment
-source "$REPO_DIR/venv/bin/activate"
+#if [[ ! -f "$REPO_DIR/venv/bin/python" ]]; then
+#    echo "- deploy_book: ERROR: ******** Please create the virtual environment first ********"
+#    exit 1
+#fi
+## Activate the virtual environment
+#source "$REPO_DIR/venv/bin/activate"
 # Run the script
 python "$REPO_DIR/tools/doc/process_md_docs.py"
 if [[ $? -ne 0 ]]; then
@@ -81,8 +81,8 @@ echo "- deploy_book: built docs ($REPO_DIR/tools/doc/process_md_docs.py)"
 
 
 # Checkout docs branch
-# git checkout -B docs origin/docs
-git checkout docs
+git checkout -B docs origin/docs
+# git checkout docs
 if [[ $? -ne 0 ]]; then
     echo "- deploy_book: ERROR: ******** Error checking out docs branch ********"
     exit 1
