@@ -1,3 +1,4 @@
+#include "vd_path/vd_path.h"
 // From https://raw.githubusercontent.com/ToruNiina/pnm/master/pnm.hpp
 // MIT License
 //
@@ -1070,7 +1071,7 @@ namespace pnm
     {
         using namespace detail::literals;
 
-        std::ifstream ifs(fname);
+        auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")));
         if(!ifs.good())
         {
             throw std::runtime_error(
@@ -1173,7 +1174,7 @@ namespace pnm
     image<bit_pixel, Alloc> read_pbm_binary(const std::string& fname)
     {
         using namespace detail::literals;
-        std::ifstream ifs(fname, std::ios::binary);
+        auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
         if(!ifs.good())
         {
             throw std::runtime_error(
@@ -1267,7 +1268,7 @@ namespace pnm
         using namespace detail::literals;
         char descripter[2];
         {
-            std::ifstream ifs(fname, std::ios::binary);
+            auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
             ifs.read(descripter, 2);
         }
 
@@ -1287,7 +1288,7 @@ namespace pnm
     image<gray_pixel, Alloc> read_pgm_ascii(const std::string& fname)
     {
         using namespace detail::literals;
-        std::ifstream ifs(fname);
+        auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")));
         if(!ifs.good())
         {
             throw std::runtime_error(
@@ -1393,7 +1394,7 @@ namespace pnm
     image<gray_pixel, Alloc> read_pgm_binary(const std::string& fname)
     {
         using namespace detail::literals;
-        std::ifstream ifs(fname, std::ios::binary);
+        auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
         if(!ifs.good())
         {
             throw std::runtime_error(
@@ -1468,7 +1469,7 @@ namespace pnm
         using namespace detail::literals;
         char descripter[2];
         {
-            std::ifstream ifs(fname, std::ios::binary);
+            auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
             ifs.read(descripter, 2);
         }
 
@@ -1489,7 +1490,7 @@ namespace pnm
     image<rgb_pixel, Alloc> read_ppm_ascii(const std::string& fname)
     {
         using namespace detail::literals;
-        std::ifstream ifs(fname);
+        auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")));
         if(!ifs.good())
         {
             throw std::runtime_error(
@@ -1604,7 +1605,7 @@ namespace pnm
     image<rgb_pixel, Alloc> read_ppm_binary(const std::string& fname)
     {
         using namespace detail::literals;
-        std::ifstream ifs(fname, std::ios::binary);
+        auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
         if(!ifs.good())
         {
             throw std::runtime_error(
@@ -1682,7 +1683,7 @@ namespace pnm
         using namespace detail::literals;
         char descripter[2];
         {
-            std::ifstream ifs(fname, std::ios::binary);
+            auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
             ifs.read(descripter, 2);
         }
 
@@ -1743,7 +1744,7 @@ namespace pnm
         using namespace detail::literals;
         char descripter[2];
         {
-            std::ifstream ifs(fname, std::ios::binary);
+            auto ifs = vdas::path::openIn(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
             ifs.read(descripter, 2);
         }
         if(descripter[0] != 'P')
@@ -1783,7 +1784,7 @@ namespace pnm
     void write_pbm_ascii(const std::string& fname,
                          const image<bit_pixel, Alloc>& img)
     {
-        std::ofstream ofs(fname);
+        auto ofs = vdas::path::openOut(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")));
         if(!ofs.good())
         {
             throw std::runtime_error(
@@ -1808,7 +1809,7 @@ namespace pnm
     void write_pbm_binary(const std::string& fname,
                           const image<bit_pixel, Alloc>& img)
     {
-        std::ofstream ofs(fname, std::ios::binary);
+        auto ofs = vdas::path::openOut(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
         if(!ofs.good())
         {
             throw std::runtime_error(
@@ -1862,7 +1863,7 @@ namespace pnm
     void write_pgm_ascii(const std::string& fname,
                          const image<gray_pixel, Alloc>& img)
     {
-        std::ofstream ofs(fname);
+        auto ofs = vdas::path::openOut(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")));
         if(!ofs.good())
         {
             throw std::runtime_error(
@@ -1887,7 +1888,7 @@ namespace pnm
     void write_pgm_binary(const std::string& fname,
                           const image<gray_pixel, Alloc>& img)
     {
-        std::ofstream ofs(fname, std::ios::binary);
+        auto ofs = vdas::path::openOut(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
         if(!ofs.good())
         {
             throw std::runtime_error(
@@ -1928,7 +1929,7 @@ namespace pnm
     void write_ppm_ascii(const std::string& fname,
                          const image<rgb_pixel, Alloc>& img)
     {
-        std::ofstream ofs(fname);
+        auto ofs = vdas::path::openOut(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")));
         if(!ofs.good())
         {
             throw std::runtime_error(
@@ -1956,7 +1957,7 @@ namespace pnm
     void write_ppm_binary(const std::string& fname,
                           const image<rgb_pixel, Alloc>& img)
     {
-        std::ofstream ofs(fname, std::ios::binary);
+        auto ofs = vdas::path::openOut(vdas::path::require(vdas::path::parseUtf8(fname, "hello-pnm-filename")), std::ios::binary);
         if(!ofs.good())
         {
             throw std::runtime_error(

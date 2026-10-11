@@ -1,6 +1,7 @@
 #include "hello_imgui/runner_params.h"
 
-#include <filesystem>
+#include "vd_path/vd_path.h"
+#include <stdexcept>
 
 namespace HelloImGui
 {
@@ -35,7 +36,7 @@ namespace HelloImGui
 
                 for (char c : s)
                 {
-                    if (isalnum(c))
+                    if (isalnum(static_cast<unsigned char>(c)))
                         filenameSanitized += c;
                     else
                         filenameSanitized += "_";
@@ -55,27 +56,20 @@ namespace HelloImGui
 
         };
 
-        auto mkdirToFilename = [](const std::string& filename) -> bool
+        auto filename = vdas::path::parseUtf8(_getIniFileName(), "hello-ini-filename");
+        if (!filename) throw std::runtime_error("Invalid Hello ImGui ini filename");
+        const auto folderText = HelloImGui::IniFolderLocation(runnerParams.iniFolderType);
+        auto folder = vdas::path::parseUtf8(folderText, "hello-ini-directory");
+        if (!folder) throw std::runtime_error("Invalid Hello ImGui ini directory");
+        auto fullPath = folder.value().join(filename.value());
+        if (!fullPath) throw std::runtime_error("Hello ImGui ini join failed");
+        auto parent = fullPath.value().parent();
+        if (!parent.empty())
         {
-            std::filesystem::path p(filename);
-            std::filesystem::path dir = p.parent_path();
-
-            if (dir.empty())
-                return true;
-
-            if (std::filesystem::exists(dir))
-                return std::filesystem::is_directory(dir) || std::filesystem::is_symlink(dir);
-
-            return std::filesystem::create_directories(dir);
-        };
-
-
-        std::string iniFilename = _getIniFileName();
-        std::string folder = HelloImGui::IniFolderLocation(runnerParams.iniFolderType);
-
-        std::string iniFullFilename = folder.empty() ? iniFilename : folder + "/" + iniFilename;
-        bool settingsDirIsAccessible = mkdirToFilename(iniFullFilename);
-        IM_ASSERT(settingsDirIsAccessible);
+            auto created = vdas::path::createDirectories(parent);
+            if (!created) throw std::runtime_error("Hello ImGui ini directory inaccessible: " + created.error().nativeError.message());
+        }
+        const std::string iniFullFilename = fullPath.value().utf8();
 
         return iniFullFilename;
     }
@@ -88,11 +82,10 @@ namespace HelloImGui
         if (iniFullFilename.empty())
             return;
 
-        if (!std::filesystem::exists(iniFullFilename))
-            return;
-
-        bool success = std::filesystem::remove(iniFullFilename);
-        IM_ASSERT(success && "Failed to delete ini file %s");
+        auto path = vdas::path::parseUtf8(iniFullFilename, "hello-delete-ini");
+        if (!path) throw std::runtime_error("Invalid Hello ImGui ini filename");
+        auto removed = vdas::path::remove(path.value());
+        if (!removed) throw std::runtime_error("Failed to delete Hello ImGui ini: " + removed.error().nativeError.message());
     }
 
     // HasIniSettings returns true if the ini file for the application settings exists.
@@ -103,7 +96,11 @@ namespace HelloImGui
         if (iniFullFilename.empty())
             return false;
 
-        return std::filesystem::exists(iniFullFilename);
+        auto path = vdas::path::parseUtf8(iniFullFilename, "hello-has-ini");
+        if (!path) throw std::runtime_error("Invalid Hello ImGui ini filename");
+        auto exists = vdas::path::exists(path.value());
+        if (!exists) throw std::runtime_error("Failed to query Hello ImGui ini: " + exists.error().nativeError.message());
+        return exists.value();
     }
 
 }  // namespace HelloImGui

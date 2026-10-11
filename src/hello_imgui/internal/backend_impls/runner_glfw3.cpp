@@ -58,8 +58,7 @@ namespace HelloImGui
             glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
         #endif
         bool glfwInitSuccess = glfwInit();
-        (void) glfwInitSuccess;
-        IM_ASSERT(glfwInitSuccess);
+        if (!glfwInitSuccess) throw std::runtime_error("GLFW initialization failed");
     }
 
     void RunnerGlfw3::Impl_CreateWindow(std::function<void()> renderCallbackDuringResize)
@@ -99,12 +98,14 @@ namespace HelloImGui
         #endif
     }
 
+    // Cleanup accepts partial setup: only initialized ImGui backend/window state is released.
     void RunnerGlfw3::Impl_Cleanup()
     {
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-
-        glfwDestroyWindow((GLFWwindow *)mWindow);
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().BackendPlatformUserData)
+            ImGui_ImplGlfw_Shutdown();
+        if (mWindow) glfwDestroyWindow((GLFWwindow *)mWindow);
+        mWindow = nullptr;
+        params.backendPointers.glfwWindow = nullptr;
         glfwTerminate();
     }
 

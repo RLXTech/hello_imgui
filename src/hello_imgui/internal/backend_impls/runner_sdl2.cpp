@@ -168,13 +168,16 @@ namespace HelloImGui
         #endif
     }
 
+    // Cleanup accepts partial setup, preserving the context until app callbacks finish.
     void RunnerSdl2::Impl_Cleanup()
     {
-        ImGui_ImplSDL2_Shutdown();
-        ImGui::DestroyContext();
-
-        SDL_GL_DeleteContext(mGlContext);
-        SDL_DestroyWindow((SDL_Window *)mWindow);
+        if (ImGui::GetCurrentContext() && ImGui::GetIO().BackendPlatformUserData)
+            ImGui_ImplSDL2_Shutdown();
+        if (mGlContext) SDL_GL_DeleteContext(mGlContext);
+        if (mWindow) SDL_DestroyWindow((SDL_Window *)mWindow);
+        mGlContext = nullptr;
+        mWindow = nullptr;
+        params.backendPointers.sdlWindow = nullptr;
         SDL_Quit();
     }
 

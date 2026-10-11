@@ -120,28 +120,24 @@ AbstractRunner::~AbstractRunner()
 }
 
 
+// Run and setup share the same phased failure cleanup, including non-standard exceptions.
 void AbstractRunner::Run()
 {
-    Setup();
-
-#ifdef HELLOIMGUI_MOBILEDEVICE
-    while (true)
-        CreateFramesAndRender();
-#else
     try
     {
-        while (!params.appShallExit)
-            CreateFramesAndRender();
-
+        Setup();
+#ifdef HELLOIMGUI_MOBILEDEVICE
+        while (true) CreateFramesAndRender();
+#else
+        while (!params.appShallExit) CreateFramesAndRender();
         TearDown(false);
+#endif
     }
-    catch(std::exception&)
+    catch (...)
     {
-        // Late handling of user exceptions: TearDown backend and rethrow
         TearDown(true);
         throw;
     }
-#endif
 }
 
 
@@ -613,6 +609,7 @@ void AbstractRunner::Setup()
 
     // Init platform backend (SDL, Glfw)
     Impl_InitPlatformBackend();
+    mPlatformInitialized = true;
 
     #ifdef HELLOIMGUI_HAS_OPENGL
         if (params.rendererBackendType == RendererBackendType::OpenGL3)
@@ -660,6 +657,7 @@ void AbstractRunner::Setup()
         params.callbacks.PostInit_AddPlatformBackendCallbacks();
 
     Impl_LinkPlatformAndRenderBackends();
+    mBackendsLinked = true;
 
     if (params.callbacks.PostInit)
         params.callbacks.PostInit();
@@ -668,7 +666,10 @@ void AbstractRunner::Setup()
 
     #ifdef HELLOIMGUI_WITH_TEST_ENGINE
         if (params.useImGuiTestEngine)
+        {
             TestEngineCallbacks::Setup();
+            mTestEngineInitialized = true;
+        }
     #endif
 
     //
@@ -702,6 +703,7 @@ void AbstractRunner::Setup()
     mRemoteDisplayHandler.SendFonts();
 
     mIdxFrame = 0;
+    mSetupComplete = true;
 }
 
 
@@ -1367,48 +1369,57 @@ void AbstractRunner::OnLowMemory()
     #endif
 }
 
+// Release completed setup stages once. Preserve the original failure and continue cleanup
+// even if preference persistence or a user cleanup callback fails.
 void AbstractRunner::TearDown(bool gotException)
 {
-    IM_ASSERT(!mWasTearedDown && "TearDown() called twice!");
+    if (mWasTearedDown) return;
     mWasTearedDown = true;
-    if (! gotException)
+    std::exception_ptr cleanupFailure;
+    auto attempt = [&](auto&& action)
     {
-        // Store screenshot before exiting
-        {
+        try { action(); }
+        catch (...) { if (!cleanupFailure) cleanupFailure = std::current_exception(); }
+    };
+    if (!gotException && mSetupComplete)
+    {
+        attempt([&]() {
             ImageBuffer b = ScreenshotRgb();
             setFinalAppWindowScreenshotRgbBuffer(b);
             float scale = (ImGui::GetIO().DisplayFramebufferScale.x + ImGui::GetIO().DisplayFramebufferScale.y) / 2.f;
             setFinalAppWindowScreenshotFramebufferScale(scale);
-        }
-        if (params.appWindowParams.restorePreviousGeometry)
-            HelloImGuiIniSettings::SaveLastRunWindowBounds(IniSettingsLocation(params),
-                                                           mBackendWindowHelper->GetWindowBounds(mWindow));
-        LayoutSettings_Save();
-        HelloImGuiIniSettings::SaveHelloImGuiMiscSettings(IniSettingsLocation(params), params);
+            if (params.appWindowParams.restorePreviousGeometry)
+                HelloImGuiIniSettings::SaveLastRunWindowBounds(IniSettingsLocation(params),
+                    mBackendWindowHelper->GetWindowBounds(mWindow));
+            LayoutSettings_Save();
+            HelloImGuiIniSettings::SaveHelloImGuiMiscSettings(IniSettingsLocation(params), params);
+        });
     }
-
-    HelloImGui::internal::Free_ImageFromAssetMap();
-
-    if (!gotException && params.callbacks.BeforeExit)
-            params.callbacks.BeforeExit();
-
-    #ifdef HELLOIMGUI_WITH_TEST_ENGINE
-        if (params.useImGuiTestEngine)
-            TestEngineCallbacks::TearDown_ImGuiContextAlive();
-    #endif
-
-    mRenderingBackendCallbacks->Impl_Shutdown_3D();
-    Impl_Cleanup();
-
-
-    if (!gotException && params.callbacks.BeforeExit_PostCleanup)
-        params.callbacks.BeforeExit_PostCleanup();
-    #ifdef HELLOIMGUI_WITH_TEST_ENGINE
-        if (params.useImGuiTestEngine)
-            TestEngineCallbacks::TearDown_ImGuiContextDestroyed();
-    #endif
-
-    mRemoteDisplayHandler.Shutdown();
+    const bool failed = gotException || bool(cleanupFailure);
+    attempt([&]() {
+        auto& callback = failed ? params.callbacks.BeforeExit_OnException : params.callbacks.BeforeExit;
+        if (callback) callback();
+    });
+    if (ImGui::GetCurrentContext()) attempt([&]() { HelloImGui::internal::Free_ImageFromAssetMap(); });
+#ifdef HELLOIMGUI_WITH_TEST_ENGINE
+    if (mTestEngineInitialized) attempt([&]() { TestEngineCallbacks::TearDown_ImGuiContextAlive(); });
+#endif
+    if (mBackendsLinked || (ImGui::GetCurrentContext() && ImGui::GetIO().BackendRendererUserData))
+        attempt([&]() { mRenderingBackendCallbacks->Impl_Shutdown_3D(); });
+    if (mPlatformInitialized) attempt([&]() { Impl_Cleanup(); });
+    // Also covers CheckPrefs/platform setup failure and the headless backend.
+    if (ImGui::GetCurrentContext()) attempt([&]() { ImGui::DestroyContext(); });
+    if (!failed && params.callbacks.BeforeExit_PostCleanup)
+        attempt([&]() { params.callbacks.BeforeExit_PostCleanup(); });
+#ifdef HELLOIMGUI_WITH_TEST_ENGINE
+    if (mTestEngineInitialized) attempt([&]() { TestEngineCallbacks::TearDown_ImGuiContextDestroyed(); });
+#endif
+    attempt([&]() { mRemoteDisplayHandler.Shutdown(); });
+    if (cleanupFailure)
+    {
+        if (!gotException) std::rethrow_exception(cleanupFailure);
+        fprintf(stderr, "HelloImGui: failure during exception cleanup\n");
+    }
 }
 
 

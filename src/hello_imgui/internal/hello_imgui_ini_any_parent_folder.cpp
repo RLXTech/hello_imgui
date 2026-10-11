@@ -1,6 +1,7 @@
 #include "hello_imgui/internal/hello_imgui_ini_any_parent_folder.h"
 #include "hello_imgui/internal/inicpp.h"
 
+#include "vd_path/vd_system_path.h"
 #include <vector>
 #include <filesystem>
 #include <string>
@@ -17,15 +18,15 @@ namespace HelloImGui
         std::vector<std::string> _folderAndAllParents(const std::string& folder)
         {
             std::vector<std::string> result;
-            std::string currentFolder = folder;
+            auto admitted = vdas::path::parseUtf8(folder, "hello-parent-ini");
+            if (!admitted) return result;
+            auto currentFolder = admitted.value();
             while (true)
             {
-                result.push_back(currentFolder);
-                std::filesystem::path p(currentFolder);
-                if (p.has_parent_path() && (p.parent_path() != p))
-                    currentFolder = p.parent_path().string();
-                else
-                    break;
+                result.push_back(currentFolder.utf8());
+                auto parent = currentFolder.parent();
+                if (parent.empty() || parent == currentFolder) break;
+                currentFolder = std::move(parent);
             }
             return result;
         };
@@ -34,7 +35,9 @@ namespace HelloImGui
         {
             std::vector<std::string> allIniFileToSearch;
 
-            std::string currentFolder = std::filesystem::current_path().string();
+            auto cwd = vdas::path::currentDirectory();
+            if (!cwd) return allIniFileToSearch;
+            const std::string currentFolder = cwd.value().utf8();
             for (const auto& folder : _folderAndAllParents(currentFolder))
                 allIniFileToSearch.push_back(folder + "/hello_imgui.ini");
 
@@ -44,10 +47,10 @@ namespace HelloImGui
         template<typename T>
         std::optional<T> _readIniValue(const std::string& iniFilePath, const std::string& sectionName, const std::string& valueName)
         {
-            if (! std::filesystem::exists(iniFilePath))
-                return std::nullopt;
-            if (! std::filesystem::is_regular_file(iniFilePath))
-                return std::nullopt;
+            auto path = vdas::path::parseUtf8(iniFilePath, "hello-parent-ini");
+            if (!path) return std::nullopt;
+            auto regular = vdas::path::isRegularFile(path.value());
+            if (!regular || !regular.value()) return std::nullopt;
 
             try
             {

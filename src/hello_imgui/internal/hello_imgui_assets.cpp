@@ -19,89 +19,23 @@
 #include <vector>
 #include <stdio.h>
 
-#ifdef _WIN32
-#include <direct.h>
-#include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
-#ifdef HELLOIMGUI_INSIDE_APPLE_BUNDLE
-// We are inside an apple bundle, so we need to chdir to the bundle resources folder
-// (otherwise, the assets folder would not be found)
-static void ChdirToBundleResourcesFolder()
-{
-    std::string bundlePath = GetBundlePath();
-    std::string resourceFolder = bundlePath + "/Contents/Resources";
-    chdir(resourceFolder.c_str());
-}
-#endif
-
+#include "vd_path/vd_system_path.h"
 namespace FileUtils
 {
-#ifdef _WIN32
-    std::wstring Utf8ToUtf16(const std::string& utf8Str)
-    {
-        if (utf8Str.empty())
-            return std::wstring();
-
-        // Calculate the required size for the wide string.
-        int requiredSize = MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
-        if (requiredSize == 0)
-            HIMG_ERROR("Failed to convert UTF-8 to UTF-16.");
-
-        std::wstring wideStr;
-        wideStr.resize(requiredSize);
-
-        // Perform the conversion.
-        if (!MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wideStr[0], requiredSize))
-            HIMG_ERROR("Failed to convert UTF-8 to UTF-16.");
-
-        return wideStr;
-    }
-
-    bool IsRegularFile_Utf8ToUtf16(const std::string& filename)
-    {
-        std::wstring filename_u16 = Utf8ToUtf16(filename);
-
-        DWORD fileAttributes = GetFileAttributesW(filename_u16.c_str());
-        if (fileAttributes == INVALID_FILE_ATTRIBUTES)
-            return false;  // File doesn't exist or some other error
-
-        // Check if it's a regular file (and not a directory)
-        if (fileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-            return false;  // It's a directory
-
-        return true;  // It's a regular file
-    }
-#endif
-
-
+    /** @brief Validate the declared resource path and probe the same native identity used for reading. */
     bool IsRegularFile(const std::string& filename)
     {
-#ifdef _WIN32
-        return IsRegularFile_Utf8ToUtf16(filename);
-#else
-        FILE *f = fopen(filename.c_str(), "r");
-        bool found = (f != NULL);
-        if (f)
-            fclose(f);
-        return found;
-#endif
+        auto path = vdas::path::parseUtf8(filename, "hello-resource");
+        if (!path) return false;
+        auto result = vdas::path::isRegularFile(path.value());
+        return result && result.value();
     }
-
+    /** @brief Return native CWD as UTF-8, or a controlled error without a fixed buffer. */
     std::string GetCurrentDirectory()
     {
-        char buffer[2000];
-#ifdef _WIN32
-        char* b = _getcwd(buffer, 2000);
-        (void)b;
-#else
-        char *b = getcwd(buffer, 2000);
-        (void)b;
-#endif
-        std::string r = buffer;
-        return r;
+        auto cwd = vdas::path::currentDirectory();
+        if (!cwd) throw std::runtime_error("Hello ImGui CWD unavailable");
+        return cwd.value().utf8();
     }
 }
 
@@ -151,7 +85,8 @@ std::vector<AssetFolderWithDesignation> computePossibleAssetsFolders()
     // Search inside a subfolder of the current working directory
     #if !defined(HELLOIMGUI_MOBILEDEVICE)
     {
-        r.push_back({FileUtils::GetCurrentDirectory() +  "/" + gAssetsSubfolderFolderName, "current_folder/assets"});
+        auto cwd = vdas::path::currentDirectory();
+        if (cwd) r.push_back({cwd.value().join(gAssetsSubfolderFolderName).value().utf8(), "current_folder/assets"});
     }
     #endif
 
@@ -193,7 +128,11 @@ std::string AssetFileFullPath(const std::string& assetFilename, bool assertIfNot
     auto possibleAssetsFolders = computePossibleAssetsFolders();
     for (const auto& assetsFolder: possibleAssetsFolders)
     {
-        std::string path = assetsFolder.folder + "/" + assetFilename;
+        auto folder = vdas::path::parseUtf8(assetsFolder.folder, "hello-resource-root");
+        if (!folder) continue;
+        auto joined = folder.value().join(assetFilename);
+        if (!joined) continue;
+        const std::string path = joined.value().utf8();
         if (FileUtils::IsRegularFile(path))
             return path;
     }
@@ -209,25 +148,6 @@ std::string AssetFileFullPath(const std::string& assetFilename, bool assertIfNot
     // Handle failures below
     //
 
-    #ifdef HELLOIMGUI_INSIDE_APPLE_BUNDLE
-    {
-        // if we are inside an apple bundle, we may have to chdir to the bundle resources folder
-        // let's try this once
-        static bool triedChdirToBundleResourcesFolder = false;
-        if (!triedChdirToBundleResourcesFolder && gOverrideAssetsFolder.empty())
-        {
-            triedChdirToBundleResourcesFolder = true;
-            auto current_path = std::filesystem::current_path();
-            ChdirToBundleResourcesFolder();
-            std::string newPath = AssetFileFullPath(assetFilename, false);
-            if (!newPath.empty())
-                return newPath;
-            else
-                std::filesystem::current_path(current_path);
-        }
-    };
-    #endif
-
     // Display nice message on error
     if (assertIfNotFound)
     {
@@ -240,7 +160,7 @@ std::string AssetFileFullPath(const std::string& assetFilename, bool assertIfNot
             errorMessage += "            " + assetsFolder.folder + "\n";
         }
         errorMessage += "    (you can call HelloImGui::SetAssetsFolder() to set the default search location)\n";
-        HIMG_ERROR(errorMessage);
+        throw std::runtime_error(errorMessage);
     }
     return "";
 #endif
@@ -286,7 +206,7 @@ AssetFileData DefaultLoadAssetFileData(const char *assetPath)
         {
             std::string errorMessage = std::string("LoadAssetFileData(") + assetPath + ")\n";
             errorMessage += "==> SDL_LoadFile(" + assetFullPath + ") failed !!!!\n";
-            HIMG_ERROR(errorMessage);
+            throw std::runtime_error(errorMessage);
             IM_ASSERT(false);
         }
 
@@ -308,18 +228,18 @@ AssetFileData LoadAssetFileData_Impl(const char *assetPath)
 {
     AssetFileData r;
 
-#ifdef _WIN32
-    std::wstring wide_assetPath = FileUtils::Utf8ToUtf16(assetPath);
-    std::ifstream ifs(wide_assetPath.c_str(), std::ios::binary | std::ios::ate);
-#else
-    std::ifstream ifs(assetPath, std::ios::binary | std::ios::ate);
-#endif
-    if (!ifs.good())
-        return AssetFileData();
+    auto path = vdas::path::parseUtf8(assetPath, "hello-asset-read");
+    if (!path) return AssetFileData();
+    auto opened = vdas::path::openRead(path.value(), std::ios::binary | std::ios::ate);
+    if (!opened) throw std::runtime_error("Asset read failed: " + opened.error().nativeError.message());
+    auto ifs = std::move(opened).value();
 
-    r.dataSize = (std::size_t)ifs.tellg();
+    const auto size = ifs.tellg();
+    if (size < 0) return AssetFileData();
+    r.dataSize = static_cast<std::size_t>(size);
     ifs.seekg(0, std::ios::beg);
-    r.data = malloc(r.dataSize);
+    r.data = malloc(r.dataSize ? r.dataSize : 1);
+    if (!r.data) throw std::bad_alloc();
 
     if (ifs.read((char *)r.data, r.dataSize))
         return r;
@@ -339,7 +259,7 @@ AssetFileData DefaultLoadAssetFileData(const char *assetPath)
         std::stringstream msg;
         msg << "LoadAssetFileData: cannot load " << assetPath << " (also tried " << fullPath << ")\n";
         msg << "(you can call HelloImGui::SetAssetsFolder() to change the assets default location.";
-        HIMG_ERROR(msg.str());
+        throw std::runtime_error(msg.str());
     }
     return r;
 }

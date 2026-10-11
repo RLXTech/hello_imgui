@@ -217,6 +217,10 @@ struct RunnerCallbacks
     //  (when OpenGL and ImGui are still inited)
     VoidFunction BeforeExit = EmptyVoidFunction();
 
+    // Called on setup/frame failure while any established GUI context is still alive.
+    // Must handle partial initialization and must not mark an incomplete session clean.
+    VoidFunction BeforeExit_OnException;
+
     // `EnqueueBeforeExit`: Add a function that will be called once before exiting
     //  (when OpenGL and ImGui are still inited)
     // (this will modify the `BeforeExit` callback by appending the new callback (using `SequenceFunctions`)

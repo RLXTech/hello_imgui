@@ -1,3 +1,17 @@
+# The standalone fork declares the exact shared header contract; no ANSI fallback.
+function(hello_imgui_require_vd_path)
+    if(NOT TARGET vd_path)
+        if(NOT VD_COMMON_SOURCE_DIR)
+            message(FATAL_ERROR "Hello ImGui requires vd_common; set VD_COMMON_SOURCE_DIR to the pinned dependency checkout")
+        endif()
+        add_subdirectory("${VD_COMMON_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/vd_common")
+    endif()
+    get_target_property(VD_PATH_ACTIVE_ID vd_path VD_PATH_CONTENT_ID)
+    if(NOT VD_PATH_ACTIVE_ID STREQUAL "485d6205ceddddcceb54e43f97a7117088d94e6a7114114d0d1dbe635cd6437f")
+        message(FATAL_ERROR "Hello ImGui vd_common contract mismatch; use the declared pinned shared dependency")
+    endif()
+endfunction()
+
 ###################################################################################################
 #
 # This file contains the main CMake logic that is used to build HelloImGui
@@ -230,6 +244,14 @@ function(him_add_hello_imgui)
         set(sources ${sources} ${sources_mm})
     endif()
     add_library(${HELLOIMGUI_TARGET} ${sources})
+    hello_imgui_require_vd_path()
+    target_link_libraries(${HELLOIMGUI_TARGET} PRIVATE $<BUILD_INTERFACE:vd_path>)
+    target_compile_features(${HELLOIMGUI_TARGET} PRIVATE cxx_std_20)
+    if(WIN32)
+        # Header-only vd_path is build-only; retain its native system libraries in installed exports.
+        target_link_libraries(${HELLOIMGUI_TARGET} PUBLIC shell32 ole32)
+    endif()
+
     if(APPLE AND NOT IOS)
         target_compile_definitions(${HELLOIMGUI_TARGET} PUBLIC HELLOIMGUI_MACOS)
     endif()
@@ -354,6 +376,9 @@ function(_him_do_build_imgui)
     else()
         add_library(imgui ${imgui_sources})
     endif()
+    hello_imgui_require_vd_path()
+    target_link_libraries(imgui PRIVATE $<BUILD_INTERFACE:vd_path>)
+    target_compile_features(imgui PRIVATE cxx_std_20)
     if (IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
         target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
     endif()

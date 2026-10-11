@@ -1,3 +1,4 @@
+#include "vd_path/vd_path.h"
 /*
  * From https://github.com/Rookfighter/inifile-cpp
  * inicpp.h
@@ -692,8 +693,15 @@ namespace ini
           * @param fileName path to the file that should be loaded. */
         void load(const std::string &fileName)
         {
-            std::ifstream is(fileName.c_str());
-            decode(is);
+            auto admitted = vdas::path::require(vdas::path::parseUtf8(fileName, "hello.ini-file"));
+            auto opened = vdas::path::openRead(admitted);
+            if (!opened)
+            {
+                if (opened.error().code == vdas::path::PathErrorCode::NotFound) return;
+                throw vdas::path::PathFailure(opened.error());
+            }
+            decode(opened.value());
+            if (opened.value().bad()) throw std::runtime_error("hello.ini-file: read failed");
         }
 
         /** Encodes this inifile object and writes the output to the given stream.
@@ -732,8 +740,11 @@ namespace ini
           * @param fileName path to the file where the data should be stored. */
         void save(const std::string &fileName) const
         {
-            std::ofstream os(fileName.c_str());
+            auto admitted = vdas::path::require(vdas::path::parseUtf8(fileName, "hello.ini-file"));
+            auto os = vdas::path::require(vdas::path::openWrite(admitted));
             encode(os);
+            os.close();
+            if (!os) throw std::runtime_error("hello.ini-file: write failed");
         }
     };
 

@@ -119,7 +119,17 @@ static void Priv_SetupRunner(RunnerParams &passedUserParams, SetupMode setupMode
         IM_ASSERT(false && "HelloImGui::Renderer() failed to factor a runner!");
     }
     if (shallSetupTearDown)
-        gLastRunner->Setup();
+    {
+        try { gLastRunner->Setup(); }
+        catch (...)
+        {
+            gLastRunner->TearDown(true);
+            gLastRunner.reset();
+            gLastRunnerParamsOpt.reset();
+            gLastRunnerParamsUserPointer = nullptr;
+            throw;
+        }
+    }
     gRendererInstanceCount++;
 }
 
@@ -127,7 +137,7 @@ static void Priv_TearDown()
 {
     IM_ASSERT(gLastRunner != nullptr && "HelloImGui::Renderer::~Renderer() called without a valid runner");
     bool shallSetupTearDown = (gSetupMode == SetupMode::Renderer);  // When using HelloImGui::Renderer, we shall call Setup/TearDown()
-    if (shallSetupTearDown)
+    if (shallSetupTearDown && !gLastRunner->WasTearedDown())
         gLastRunner->TearDown(false);
     gLastRunner = nullptr;
     gRendererInstanceCount = 0;
@@ -152,7 +162,7 @@ namespace ManualRender
     void TrySwitchToInitialized()
     {
         if (sCurrentStatus == RendererStatus::Initialized)
-            IM_ASSERT(false && "HelloImGui::ManualRender::SetupFromXXX() cannot be called while already initialized. Call TearDown() first.");
+            throw std::runtime_error("HelloImGui::ManualRender is already initialized. Call TearDown() first.");
         sCurrentStatus = RendererStatus::Initialized;
     }
 
@@ -171,7 +181,8 @@ namespace ManualRender
     {
         TrySwitchToInitialized();
         RunnerParams runnerParamsCopy = runnerParams;
-        Priv_SetupRunner(runnerParamsCopy, SetupMode::Renderer);
+        try { Priv_SetupRunner(runnerParamsCopy, SetupMode::Renderer); }
+        catch (...) { sCurrentStatus = RendererStatus::NotInitialized; throw; }
     }
 
     // Initializes the renderer with `SimpleRunnerParams`.
@@ -227,7 +238,8 @@ namespace ManualRender
 void Run(RunnerParams& runnerParams)
 {
     Priv_SetupRunner(runnerParams, SetupMode::Run);
-    gLastRunner->Run();
+    try { gLastRunner->Run(); }
+    catch (...) { Priv_TearDown(); throw; }
     Priv_TearDown();
 }
 
